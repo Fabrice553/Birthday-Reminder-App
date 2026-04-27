@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:5.0
+    container_name: birthday-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: birthday_reminder
+
+  redis:
+    image: redis:7-alpine
+    container_name: birthday-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  app:
+    build: .
+    container_name: birthday-app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongodb
+      - redis
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://mongodb:27017/birthday_reminder
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      EMAIL_USER: ${EMAIL_USER}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+    volumes:
+      - .:/app
+    command: npm start
+
+volumes:
+  mongodb_data:
+  redis_data:
