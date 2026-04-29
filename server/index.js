@@ -11,6 +11,17 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static('public'));
+
+
+// Welcome Page
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html')); // ← ADD THIS
+});
+
+// Routes
+app.use('/api/birthdays', require('./routes/birthdayRoutes'));
+app.use('/api/webhooks', require('./routes/webhookRoutes'));
 
 // Database Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/birthday_reminder';
