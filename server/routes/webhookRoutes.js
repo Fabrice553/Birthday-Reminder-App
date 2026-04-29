@@ -1,15 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { getQueueStats } = require('../services/queueService');
 const { getCronJobStatus } = require('../services/cronService');
 
-// Queue Status Webhook
-router.get('/queue/status', async (req, res) => {
+// Cron Job Status Webhook
+router.get('/cron/status', (req, res) => {
   try {
-    const stats = await getQueueStats();
+    const status = getCronJobStatus();
     res.status(200).json({
       success: true,
-      data: stats,
+      data: status,
       timestamp: new Date(),
     });
   } catch (error) {
@@ -20,13 +19,12 @@ router.get('/queue/status', async (req, res) => {
   }
 });
 
-// Cron Job Status Webhook
-router.get('/cron/status', (req, res) => {
+// Health Check Webhook
+router.get('/health', (req, res) => {
   try {
-    const status = getCronJobStatus();
     res.status(200).json({
       success: true,
-      data: status,
+      message: 'Webhook service is healthy',
       timestamp: new Date(),
     });
   } catch (error) {

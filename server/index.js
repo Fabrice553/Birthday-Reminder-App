@@ -4,11 +4,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 require('dotenv').config();
 
-const birthdayRoutes = require('./routes/birthdayRoutes');
-const webhookRoutes = require('./routes/webhookRoutes');
-const { initializeCronJobs } = require('./services/cronService');
-const { initializeBirthdayQueue } = require('./services/queueService');
-
 const app = express();
 
 // Middleware
@@ -18,32 +13,46 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Database Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/birthday_reminder', {
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/birthday_reminder';
+
+mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
   .then(() => console.log('✅ MongoDB connected'))
   .catch((err) => console.error('❌ MongoDB connection error:', err));
 
-// Initialize Queue
-initializeBirthdayQueue();
-
 // Initialize Cron Jobs
+const { initializeCronJobs } = require('./services/cronService');
 initializeCronJobs();
 
 // Routes
-app.use('/api/birthdays', birthdayRoutes);
-app.use('/api/webhooks', webhookRoutes);
+app.use('/api/birthdays', require('./routes/birthdayRoutes'));
+app.use('/api/webhooks', require('./routes/webhookRoutes'));
 
 // Health Check
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'Server is running', timestamp: new Date() });
+  res.status(200).json({ 
+    status: 'Server is running', 
+    timestamp: new Date(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// 404 Handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found',
+    path: req.path,
+  });
 });
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
   res.status(err.status || 500).json({
+    success: false,
     error: err.message || 'Internal Server Error',
     timestamp: new Date(),
   });
@@ -52,6 +61,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🎂 Birthday Reminder App running on port ${PORT}`);
+  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 module.exports = app;

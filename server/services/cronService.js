@@ -1,6 +1,6 @@
 const { CronJob } = require('cron');
 const Birthday = require('../models/birthdayModel');
-const { getBirthdayQueue } = require('./queueService');
+const { sendBirthdayEmail } = require('./emailService');
 const config = require('../config');
 
 let birthdayCheckJob = null;
@@ -21,27 +21,14 @@ exports.initializeCronJobs = () => {
 
       console.log(`🎂 Found ${todaysBirthdays.length} birthday(s) for today`);
 
-      const queue = getBirthdayQueue();
-
+      // Send emails directly (no queue needed)
       for (const birthday of todaysBirthdays) {
-        await queue.add(
-          'send-birthday-email',
-          {
-            userId: birthday._id,
-            email: birthday.email,
-            username: birthday.username,
-          },
-          {
-            attempts: 3,
-            backoff: {
-              type: 'exponential',
-              delay: 2000,
-            },
-            removeOnComplete: true,
-          }
-        );
-
-        console.log(`📧 Queued birthday email for ${birthday.email}`);
+        try {
+          await sendBirthdayEmail(birthday.email, birthday.username);
+          console.log(`📧 Birthday email sent to ${birthday.email}`);
+        } catch (error) {
+          console.error(`Failed to send email to ${birthday.email}:`, error.message);
+        }
       }
     } catch (error) {
       console.error('Error in birthday check cron job:', error);

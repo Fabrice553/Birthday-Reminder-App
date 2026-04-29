@@ -1,5 +1,4 @@
 const Birthday = require('../models/birthdayModel');
-const { birthdayQueue } = require('../services/queueService');
 const { sendBirthdayEmail } = require('../services/emailService');
 const Joi = require('joi');
 
@@ -135,7 +134,7 @@ exports.updateBirthday = async (req, res) => {
   }
 };
 
-// Delete Birthday
+// Delete Birthday (Soft Delete)
 exports.deleteBirthday = async (req, res) => {
   try {
     const birthday = await Birthday.findByIdAndUpdate(
@@ -185,33 +184,62 @@ exports.getTodaysBirthdays = async (req, res) => {
   }
 };
 
-// Manually trigger birthday reminders (for testing)
+// Manually Trigger Birthday Reminders (Testing)
 exports.triggerBirthdayReminders = async (req, res) => {
   try {
     const birthdays = await Birthday.getTodaysBirthdays();
 
+    if (birthdays.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'No birthdays today',
+        count: 0,
+        data: [],
+        results: [],
+      });
+    }
+
+    const results = [];
+    let successCount = 0;
+    let failureCount = 0;
+
+    // Send emails directly (no queue)
     for (const birthday of birthdays) {
-      await birthdayQueue.add(
-        'send-birthday-email',
-        {
-          userId: birthday._id,
+      try {
+        await sendBirthdayEmail(birthday.email, birthday.username);
+        
+        results.push({
           email: birthday.email,
           username: birthday.username,
-        },
-        {
-          attempts: 3,
-          backoff: {
-            type: 'exponential',
-            delay: 2000,
-          },
-        }
-      );
+          status: 'success',
+          message: 'Birthday email sent successfully',
+        });
+        successCount++;
+        
+        console.log(`✅ Birthday email sent to ${birthday.email}`);
+      } catch (error) {
+        results.push({
+          email: birthday.email,
+          username: birthday.username,
+          status: 'failed',
+          message: error.message,
+        });
+        failureCount++;
+        
+        console.error(`❌ Failed to send email to ${birthday.email}:`, error.message);
+      }
     }
 
     res.status(200).json({
       success: true,
-      message: `${birthdays.length} birthday reminder(s) queued`,
+      message: `Birthday reminders processed - ${successCount} sent, ${failureCount} failed`,
+      count: {
+        total: birthdays.length,
+        success: successCount,
+        failed: failureCount,
+      },
       data: birthdays,
+      results: results,
     });
   } catch (error) {
     console.error('Error triggering reminders:', error);

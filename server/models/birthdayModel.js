@@ -27,11 +27,9 @@ const birthdaySchema = new mongoose.Schema(
     },
     month: {
       type: Number,
-      required: true,
     },
     day: {
       type: Number,
-      required: true,
     },
     isActive: {
       type: Boolean,
@@ -52,8 +50,10 @@ const birthdaySchema = new mongoose.Schema(
 
 // Pre-save hook to extract month and day
 birthdaySchema.pre('save', function (next) {
-  this.month = this.dateOfBirth.getMonth() + 1;
-  this.day = this.dateOfBirth.getDate();
+  if (this.dateOfBirth) {
+    this.month = this.dateOfBirth.getMonth() + 1; // getMonth() returns 0-11
+    this.day = this.dateOfBirth.getDate();
+  }
   next();
 });
 
