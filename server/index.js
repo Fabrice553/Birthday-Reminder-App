@@ -16,7 +16,7 @@ app.use(express.static('public'));
 
 // Welcome Page
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html')); // ← ADD THIS
+  res.sendFile(path.join(__dirname, '../public/index.html')); 
 });
 
 // Routes
